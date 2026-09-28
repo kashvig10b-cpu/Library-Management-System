@@ -1,0 +1,135 @@
+package LibraryManagementSystemm;
+import javax.swing.*;
+import java.awt.*;
+import java.text.SimpleDateFormat;
+import java.util.*;
+public class Library_management extends JFrame {
+	ArrayList<String[]> books = new ArrayList<>(),
+                        members = new ArrayList<>(),
+                        txns = new ArrayList<>();
+	JTextField[] book = new JTextField[7];
+    JTextField memId = new JTextField(10),
+            memName = new JTextField(20),
+            memContact = new JTextField(15),
+            bBook = new JTextField(10),
+            bMem = new JTextField(10);
+    JButton addB = new JButton("Add"), viewB = new JButton("View"),
+            editB = new JButton("Edit/Save"), delB = new JButton("Delete"),
+            addM = new JButton("Add Member"), viewM = new JButton("View Members"),
+            borrow = new JButton("Borrow"), ret = new JButton("Return"),
+            viewT = new JButton("View Transactions"),
+            clear = new JButton("Clear"), exit = new JButton("Exit");
+    public Library_management() {
+        setTitle("Library Management System");
+        setSize(900, 550);
+        setDefaultCloseOperation(EXIT_ON_CLOSE);
+        Arrays.setAll(book, i -> new JTextField(20));
+        JTabbedPane t = new JTabbedPane();
+        t.add("Books", bookPanel());
+        t.add("Members", memberPanel());
+        t.add("Transactions", txnPanel());
+        add(t);
+        JPanel btm = new JPanel();
+        btm.add(clear);
+        btm.add(exit);
+        add(btm, BorderLayout.SOUTH);
+        listeners();
+        setLocationRelativeTo(null);
+        setVisible(true);
+    }
+    JPanel bookPanel() {
+        String[] l = {"Book ID","Book Title","Author","Publisher","Year of Publication","ISBN","Number of Copies"};
+        JPanel p = new JPanel(new GridLayout(9,2,5,5));
+        for(int i=0;i<7;i++){ p.add(new JLabel(l[i])); p.add(book[i]); }
+        p.add(addB); p.add(viewB); p.add(editB); p.add(delB);
+        return p;
+    }
+    JPanel memberPanel() {
+        JPanel p = new JPanel(new GridLayout(4,2,5,5));
+        p.add(new JLabel("Member ID")); p.add(memId);
+        p.add(new JLabel("Member Name")); p.add(memName);
+        p.add(new JLabel("Member Contact")); p.add(memContact);
+        p.add(addM); p.add(viewM);
+        return p;
+    }
+    JPanel txnPanel() {
+        JPanel p = new JPanel(new GridLayout(6,2,5,5));
+        p.add(new JLabel("Book ID")); p.add(bBook);
+        p.add(new JLabel("Member ID")); p.add(bMem);
+        p.add(borrow); p.add(new JLabel());
+        p.add(ret); p.add(new JLabel());
+        p.add(viewT); p.add(new JLabel());
+        return p;
+    }
+    void listeners() {
+    	addB.addActionListener(e -> {
+            if (book[0].getText().isEmpty() || book[1].getText().isEmpty() || find(books, book[0].getText()) != null)
+                msg("Invalid or duplicate Book");
+            else books.add(Arrays.stream(book).map(JTextField::getText).toArray(String[]::new));
+            clearAll();
+        });
+        viewB.addActionListener(e -> show("Books", books,
+                new String[]{"ID","Title","Author","Publisher","Year","ISBN","Copies"}));
+        editB.addActionListener(e -> {
+            String[] b = find(books, book[0].getText());
+            if (b == null) { msg("Book not found"); return; }
+            for(int i=1;i<7;i++) b[i] = book[i].getText();
+            msg("Updated"); clearAll();
+        });
+        delB.addActionListener(e -> msg(
+                books.removeIf(b -> b[0].equals(JOptionPane.showInputDialog("Book ID"))) ?
+                        "Deleted" : "Not found"));
+        addM.addActionListener(e -> {
+            if(memId.getText().isEmpty() || memName.getText().isEmpty() || memContact.getText().isEmpty() ||
+               find(members, memId.getText()) != null)
+                msg("Invalid Member");
+            else members.add(new String[]{memId.getText(), memName.getText(), memContact.getText()});
+            clearAll();
+        });
+        viewM.addActionListener(e ->
+                show("Members", members, new String[]{"ID","Name","Contact"}));
+        borrow.addActionListener(e -> {
+            String[] b = find(books, bBook.getText());
+            if (b == null || find(members, bMem.getText()) == null || Integer.parseInt(b[6]) == 0)
+                msg("Borrow failed");
+            else {
+                b[6] = String.valueOf(Integer.parseInt(b[6]) - 1);
+                txns.add(new String[]{b[0], bMem.getText(),
+                        new SimpleDateFormat("yyyy-MM-dd").format(new Date())});
+                msg("Borrowed");
+            }
+            clearAll();
+        });
+        ret.addActionListener(e -> {
+            String in = JOptionPane.showInputDialog("BookID,MemberID");
+            if (in == null || !in.contains(",")) return;
+            String[] p = in.split(",");
+            if (txns.removeIf(t -> t[0].equals(p[0].trim()) && t[1].equals(p[1].trim()))) {
+                String[] b = find(books, p[0].trim());
+                if (b != null) b[6] = String.valueOf(Integer.parseInt(b[6]) + 1);
+                msg("Returned");
+            } else msg("Record not found");
+        });
+        viewT.addActionListener(e ->
+                show("Transactions", txns, new String[]{"Book ID","Member ID","Date"}));
+
+        clear.addActionListener(e -> clearAll());
+        exit.addActionListener(e -> System.exit(0));
+    }
+    String[] find(ArrayList<String[]> l, String id) {
+        return l.stream().filter(a -> a[0].equals(id)).findFirst().orElse(null);
+    }
+    void show(String t, ArrayList<String[]> l, String[] c) {
+        JOptionPane.showMessageDialog(this,
+                new JScrollPane(new JTable(l.toArray(new Object[0][]), c)), t, 1);
+    }
+    void clearAll() {
+        Arrays.stream(book).forEach(tf -> tf.setText(""));
+        memId.setText(""); memName.setText(""); memContact.setText("");
+        bBook.setText(""); bMem.setText("");
+    }
+    void msg(String s) { JOptionPane.showMessageDialog(this, s); }
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(Library_management::new);
+    }
+}
